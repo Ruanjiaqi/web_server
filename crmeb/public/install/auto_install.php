@@ -138,11 +138,12 @@ if (file_put_contents(APP_DIR . '.env', $strConfig) === false) {
 }
 echo "[INSTALL] .env written to " . APP_DIR . ".env\n";
 
-// ── 创建管理员账号（仅在没有管理员时才插入，避免重新部署覆盖已修改的密码）──
-$checkAdmin = mysqli_query($conn, "SELECT COUNT(*) AS c FROM `{$dbPrefix}system_admin` WHERE `is_del`=0");
+// ── 创建管理员账号 ────────────────────────────────────────
+// 检查 id=1 的记录是否已存在（不论 is_del），避免主键冲突
+$checkAdmin = mysqli_query($conn, "SELECT COUNT(*) AS c FROM `{$dbPrefix}system_admin` WHERE `id`=1");
 $adminExists = $checkAdmin && (int)mysqli_fetch_assoc($checkAdmin)['c'] > 0;
 if ($adminExists) {
-    echo "[INSTALL] Admin already exists, skipping admin creation.\n";
+    echo "[INSTALL] Admin (id=1) already exists, skipping admin creation.\n";
 } else {
     echo "[INSTALL] Creating admin user '{$adminUser}'...\n";
     $pwdHash = password_hash($adminPwd, PASSWORD_BCRYPT);

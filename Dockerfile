@@ -14,6 +14,9 @@ RUN apk add --no-cache tzdata \
 # ── 切换腾讯云 Alpine 镜像源 ──────────────────────────────
 RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tencent.com/g' /etc/apk/repositories
 
+# ── HTTPS 证书（微信云托管生命周期钩子需要 update-ca-certificates）──
+RUN apk add --no-cache ca-certificates && update-ca-certificates
+
 # ── 安装系统依赖 ──────────────────────────────────────────
 RUN apk add --no-cache \
         nginx \
@@ -33,8 +36,11 @@ RUN apk add --no-cache \
         $PHPIZE_DEPS
 
 # ── 安装 PHP 内置扩展 ─────────────────────────────────────
+# mysqli: auto_install.php 使用 mysqli_connect()，必须安装
+# pdo_mysql: ThinkPHP ORM 使用 PDO
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) \
+        mysqli \
         pdo_mysql \
         gd \
         bcmath \
