@@ -18,9 +18,10 @@ crmeb/public/install.lock
 # ── vendor 内的日志文件（避免权限问题）───────────────────────
 crmeb/vendor/**/*.log
 
-# ── 大型字体文件（非必需资源）────────────────────────────────
-crmeb/vendor/dh2y/think-qrcode/src/simsun.ttc
-crmeb/vendor/fastknife/ajcaptcha/resources/fonts/WenQuanZhengHei.ttf
+# 字体文件不排除：
+# - WenQuanZhengHei.ttf 被 ajcaptcha 用于验证码文字渲染（imagettfbbox）
+# - simsun.ttc 被 think-qrcode 用于二维码生成
+# 排除后会报 "Could not find/open font" 错误
 
 # ── 前端模板源码（非 PHP 运行时需要）──────────────────────────
 template/
