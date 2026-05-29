@@ -1,0 +1,29 @@
+2026-05-30 05:59:10,204 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.
+2026-05-30 05:59:10,207 INFO supervisord started with pid 1
+2026-05-30 05:59:11,209 INFO spawned: 'php-fpm' with pid 7
+2026-05-30 05:59:11,211 INFO spawned: 'queue' with pid 8
+2026-05-30 05:59:11,212 INFO spawned: 'timer' with pid 9
+2026-05-30 05:59:11,213 INFO spawned: 'workerman' with pid 10
+2026-05-30 05:59:11,262 INFO exited: workerman (exit status 0; not expected)
+2026-05-30 05:59:11,262 INFO reaped unknown pid 15 (exit status 0)
+2026-05-30 05:59:11,262 INFO gave up: workerman entered FATAL state, too many start retries too quickly
+2026-05-30 05:59:12,231 INFO success: php-fpm entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-05-30 05:59:12,231 INFO success: queue entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-05-30 05:59:12,231 INFO success: timer entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-05-30 06:08:12,489 WARN received SIGQUIT indicating exit request
+2026-05-30 06:08:12,490 INFO waiting for php-fpm, queue, timer to die
+2026-05-30 06:08:12,579 INFO stopped: timer (exit status 0)
+2026-05-30 06:08:12,581 INFO stopped: queue (terminated by SIGTERM)
+2026-05-30 06:08:12,582 INFO reaped unknown pid 50653 (exit status 1)
+2026-05-30 06:08:12,584 INFO stopped: php-fpm (exit status 0)
+2026-05-30 06:08:50,967 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.
+2026-05-30 06:08:50,969 INFO supervisord started with pid 1
+2026-05-30 06:08:51,971 INFO spawned: 'php-fpm' with pid 16
+2026-05-30 06:08:51,972 INFO spawned: 'queue' with pid 17
+2026-05-30 06:08:51,972 INFO spawned: 'timer' with pid 18
+2026-05-30 06:08:51,973 INFO spawned: 'workerman' with pid 19
+2026-05-30 06:08:53,019 INFO success: php-fpm entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-05-30 06:08:53,019 INFO success: queue entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-05-30 06:08:53,019 INFO success: timer entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-05-30 06:08:53,019 INFO success: workerman entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2026-05-30 06:08:53,019 INFO exited: workerman (exit status 0; expected)

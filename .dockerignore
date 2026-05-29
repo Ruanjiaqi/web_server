@@ -1,0 +1,24 @@
+# ── Git ──────────────────────────────────────────────────
+.git
+**/.git
+
+# ── 运行时生成内容（每次容器启动会重建）──────────────────────
+crmeb/runtime/
+crmeb/.env
+crmeb/supervisord.log
+crmeb/backup/
+
+# ── 开发/测试文件 ─────────────────────────────────────────
+**/.DS_Store
+**/Thumbs.db
+**/*.docx
+
+# ── vendor 内的日志文件（避免权限问题）───────────────────────
+crmeb/vendor/**/*.log
+
+# ── 大型字体文件（非必需资源）────────────────────────────────
+crmeb/vendor/dh2y/think-qrcode/src/simsun.ttc
+crmeb/vendor/fastknife/ajcaptcha/resources/fonts/WenQuanZhengHei.ttf
+
+# ── 前端模板源码（非 PHP 运行时需要）──────────────────────────
+template/

@@ -1,0 +1,27 @@
+<?php /*a:1:{s:27:"/var/www/public/mobile.html";i:1780022833;}*/ ?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title><?=$siteName?></title>
+  <style>
+    #page {
+      width: 375px;
+      height: 100vh;
+      margin: 0;
+      display: block;
+      position: absolute;
+      left: 50%;
+      -webkit-transform: translate(-50%,0);
+      -moz-transform: translate(-50%,0);
+      transform: translate(-50%,0);
+    }
+    body {
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+<iframe id="page" src="<?=$siteUrl?>" frameborder="0"></iframe>
+</body>
+</html>

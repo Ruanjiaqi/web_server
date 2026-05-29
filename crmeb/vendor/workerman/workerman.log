@@ -1,0 +1,22 @@
+2026-05-30 05:59:11 pid:9 Workerman[think] start in DEBUG mode
+2026-05-30 06:00:03 pid:13 Worker[13] process terminated
+2026-05-30 06:00:03 pid:9 worker[none:13] exit with status 65280
+2026-05-30 06:01:08 pid:5007 Worker[5007] process terminated
+2026-05-30 06:01:08 pid:9 worker[none:5007] exit with status 65280
+2026-05-30 06:02:07 pid:10911 Worker[10911] process terminated
+2026-05-30 06:02:07 pid:9 worker[none:10911] exit with status 65280
+2026-05-30 06:03:04 pid:16395 Worker[16395] process terminated
+2026-05-30 06:03:04 pid:9 worker[none:16395] exit with status 65280
+2026-05-30 06:04:07 pid:22035 Worker[22035] process terminated
+2026-05-30 06:04:07 pid:9 worker[none:22035] exit with status 65280
+2026-05-30 06:05:07 pid:27865 Worker[27865] process terminated
+2026-05-30 06:05:07 pid:9 worker[none:27865] exit with status 65280
+2026-05-30 06:06:04 pid:33425 Worker[33425] process terminated
+2026-05-30 06:06:04 pid:9 worker[none:33425] exit with status 65280
+2026-05-30 06:07:07 pid:38945 Worker[38945] process terminated
+2026-05-30 06:07:07 pid:9 worker[none:38945] exit with status 65280
+2026-05-30 06:08:08 pid:44753 Worker[44753] process terminated
+2026-05-30 06:08:08 pid:9 worker[none:44753] exit with status 65280
+2026-05-30 06:08:12 pid:9 Workerman[think] stopping ...
+2026-05-30 06:08:12 pid:9 Workerman[think] has been stopped
+2026-05-30 06:08:52 pid:18 Workerman[think] start in DEBUG mode
