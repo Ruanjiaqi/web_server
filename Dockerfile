@@ -19,6 +19,7 @@ RUN apk add --no-cache \
         nginx \
         supervisor \
         bash \
+        redis \
         libpng-dev \
         libjpeg-turbo-dev \
         freetype-dev \
@@ -50,9 +51,12 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
         simplexml
 
 # ── 安装 PECL 扩展（Redis、ImageMagick） ─────────────────
+# imagick.so 在运行时需要 libgomp（imagemagick 的 OpenMP 依赖），
+# 必须在删除构建工具之前显式保留，否则 libgomp.so.1 丢失导致扩展无法加载
 RUN pecl install redis imagick \
     && docker-php-ext-enable redis imagick \
-    && apk del $PHPIZE_DEPS
+    && apk del $PHPIZE_DEPS \
+    && apk add --no-cache libgomp
 
 # ── PHP 配置调整 ──────────────────────────────────────────
 RUN { \

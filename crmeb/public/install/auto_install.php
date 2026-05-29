@@ -138,16 +138,21 @@ if (file_put_contents(APP_DIR . '.env', $strConfig) === false) {
 }
 echo "[INSTALL] .env written to " . APP_DIR . ".env\n";
 
-// ── 创建管理员账号 ────────────────────────────────────────
-echo "[INSTALL] Creating admin user '{$adminUser}'...\n";
-$pwdHash = password_hash($adminPwd, PASSWORD_BCRYPT);
-$time    = time();
-mysqli_query($conn, "TRUNCATE TABLE `{$dbPrefix}system_admin`");
-$insertSql = "INSERT INTO `{$dbPrefix}system_admin`
-    (`id`,`account`,`head_pic`,`pwd`,`real_name`,`roles`,`last_ip`,`last_time`,`add_time`,`login_count`,`level`,`status`,`is_del`)
-    VALUES (1, '{$adminUser}', '/statics/system_images/admin_head_pic.png', '{$pwdHash}', 'admin', '1', '127.0.0.1', {$time}, {$time}, 0, 0, 1, 0)";
-if (!mysqli_query($conn, $insertSql)) {
-    echo "[INSTALL] Warning: Cannot insert admin: " . mysqli_error($conn) . "\n";
+// ── 创建管理员账号（仅在没有管理员时才插入，避免重新部署覆盖已修改的密码）──
+$checkAdmin = mysqli_query($conn, "SELECT COUNT(*) AS c FROM `{$dbPrefix}system_admin` WHERE `is_del`=0");
+$adminExists = $checkAdmin && (int)mysqli_fetch_assoc($checkAdmin)['c'] > 0;
+if ($adminExists) {
+    echo "[INSTALL] Admin already exists, skipping admin creation.\n";
+} else {
+    echo "[INSTALL] Creating admin user '{$adminUser}'...\n";
+    $pwdHash = password_hash($adminPwd, PASSWORD_BCRYPT);
+    $time    = time();
+    $insertSql = "INSERT INTO `{$dbPrefix}system_admin`
+        (`id`,`account`,`head_pic`,`pwd`,`real_name`,`roles`,`last_ip`,`last_time`,`add_time`,`login_count`,`level`,`status`,`is_del`)
+        VALUES (1, '{$adminUser}', '/statics/system_images/admin_head_pic.png', '{$pwdHash}', 'admin', '1', '127.0.0.1', {$time}, {$time}, 0, 0, 1, 0)";
+    if (!mysqli_query($conn, $insertSql)) {
+        echo "[INSTALL] Warning: Cannot insert admin: " . mysqli_error($conn) . "\n";
+    }
 }
 
 // ── 写入 install.lock ─────────────────────────────────────

@@ -52,7 +52,7 @@ export CRMEB_ADMIN_USER="${CRMEB_ADMIN_USER:-admin}"
 export CRMEB_ADMIN_PWD="${CRMEB_ADMIN_PWD:-crmeb.com}"
 
 echo "[INIT] MySQL  : ${MYSQL_HOST_IP}:${MYSQL_PORT}  DB=${MYSQL_DATABASE}"
-echo "[INIT] Redis  : ${REDIS_HOST_IP}:${REDIS_PORT}"
+echo "[INIT] Redis  : ${REDIS_HOST_IP}:${REDIS_PORT}  (容器内置)"
 echo "[INIT] Admin  : ${CRMEB_ADMIN_USER}"
 
 # ── 修复权限 ─────────────────────────────────────────────

@@ -7,6 +7,8 @@ crmeb/runtime/
 crmeb/.env
 crmeb/supervisord.log
 crmeb/backup/
+# install.lock 必须排除：若打入镜像会让 init 跳过安装，.env 为空导致 DB 连接失败
+crmeb/public/install.lock
 
 # ── 开发/测试文件 ─────────────────────────────────────────
 **/.DS_Store
