@@ -42,11 +42,7 @@ return [
             // 连接dsn
             'dsn'             => '',
             // 数据库连接参数
-            // 微信云托管 MySQL 8.0 默认开启 ONLY_FULL_GROUP_BY，
-            // CRMEB 部分 SQL 的 ORDER BY 列不在 GROUP BY 中，需要移除该模式
-            'params'          => [
-                \PDO::MYSQL_ATTR_INIT_COMMAND => "SET sql_mode='STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'",
-            ],
+            'params'          => [],
             // 数据库编码默认采用utf8
             'charset'         => Env::get('database.charset', 'utf8'),
             // 数据库表前缀
