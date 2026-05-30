@@ -49,6 +49,11 @@ class PayClient extends BaseClient
     const API_TRANSFER_BILLS_URL = 'v3/fund-app/mch-transfer/transfer-bills';
     //查询转账
     const API_TRANSFER_QUERY_URL = 'v3/fund-app/mch-transfer/transfer-bills/out-bill-no/{out_bill_no}';
+    const API_PROFIT_SHARING_RECEIVER_ADD_URL = 'v3/profitsharing/receivers/add';
+    const API_PROFIT_SHARING_ORDERS_URL = 'v3/profitsharing/orders';
+    const API_PROFIT_SHARING_QUERY_URL = 'v3/profitsharing/orders/{out_order_no}?transaction_id={transaction_id}';
+    const API_PROFIT_SHARING_FINISH_URL = 'v3/profitsharing/finish-order';
+    const API_PROFIT_SHARING_RETURN_URL = 'v3/profitsharing/return-orders';
 
     /**
      * @var string
@@ -364,6 +369,93 @@ class PayClient extends BaseClient
         return $res;
     }
 
+    public function profitSharingAddReceiver(array $receiver)
+    {
+        if (!empty($receiver['name'])) {
+            $receiver['name'] = $this->encryptor((string)$receiver['name']);
+        }
+        $res = $this->request(self::API_PROFIT_SHARING_RECEIVER_ADD_URL, 'POST', ['json' => [
+            'appid' => $this->app['config']['wechat']['appid'] ?: $this->app['config']['miniprog']['appid'],
+        ] + $receiver]);
+        if (!$res || isset($res['code'], $res['message'])) {
+            throw new PayException($res['message'] ?? '微信支付:添加分账接收方失败');
+        }
+        return $res;
+    }
+
+    public function profitSharingOrders(string $transactionId, string $outOrderNo, array $receivers, bool $unfreezeUnsplit = false)
+    {
+        foreach ($receivers as &$receiver) {
+            if (!empty($receiver['name'])) {
+                $receiver['name'] = $this->encryptor((string)$receiver['name']);
+            }
+        }
+        $data = [
+            'appid' => $this->app['config']['wechat']['appid'] ?: $this->app['config']['miniprog']['appid'],
+            'transaction_id' => $transactionId,
+            'out_order_no' => $outOrderNo,
+            'receivers' => $receivers,
+            'unfreeze_unsplit' => $unfreezeUnsplit,
+            'notify_url' => $this->profitSharingNotifyUrl(),
+        ];
+        if ($this->app['config']['v3_payment']['mer_type']) {
+            $data['sub_mchid'] = $this->app['config']['v3_payment']['sub_mch_id'];
+        }
+        $res = $this->request(self::API_PROFIT_SHARING_ORDERS_URL, 'POST', ['json' => $data]);
+        if (!$res || isset($res['code'], $res['message'])) {
+            throw new PayException($res['message'] ?? '微信支付:请求分账失败');
+        }
+        return $res;
+    }
+
+    protected function profitSharingNotifyUrl(): string
+    {
+        $configured = (string)($this->app['config']['v3_payment']['profit_sharing_notify_url'] ?? '');
+        if ($configured !== '') {
+            return $configured;
+        }
+        $siteUrl = rtrim((string)($this->app['config']['v3_payment']['site_url'] ?? sys_config('site_url')), '/');
+        return $siteUrl . '/api/pay/notify/profit_sharing';
+    }
+
+    public function profitSharingQuery(string $transactionId, string $outOrderNo)
+    {
+        $url = $this->getApiUrl(self::API_PROFIT_SHARING_QUERY_URL, ['out_order_no', 'transaction_id'], [$outOrderNo, $transactionId]);
+        $res = $this->request($url, 'GET');
+        if (!$res || isset($res['code'], $res['message'])) {
+            throw new PayException($res['message'] ?? '微信支付:查询分账失败');
+        }
+        return $res;
+    }
+
+    public function profitSharingFinish(string $transactionId, string $outOrderNo, string $description)
+    {
+        $res = $this->request(self::API_PROFIT_SHARING_FINISH_URL, 'POST', ['json' => [
+            'transaction_id' => $transactionId,
+            'out_order_no' => $outOrderNo,
+            'description' => $description,
+        ]]);
+        if (!$res || isset($res['code'], $res['message'])) {
+            throw new PayException($res['message'] ?? '微信支付:完结分账失败');
+        }
+        return $res;
+    }
+
+    public function profitSharingReturn(string $outOrderNo, string $outReturnNo, string $returnMchid, int $amount, string $description)
+    {
+        $res = $this->request(self::API_PROFIT_SHARING_RETURN_URL, 'POST', ['json' => [
+            'out_order_no' => $outOrderNo,
+            'out_return_no' => $outReturnNo,
+            'return_mchid' => $returnMchid,
+            'amount' => $amount,
+            'description' => $description,
+        ]]);
+        if (!$res || isset($res['code'], $res['message'])) {
+            throw new PayException($res['message'] ?? '微信支付:分账回退失败');
+        }
+        return $res;
+    }
+
     /**
      * 退款
      * @param string $outTradeNo
@@ -556,5 +648,44 @@ class PayClient extends BaseClient
         }
 
         return response($response, 200, [], 'json');
+    }
+
+    public function handleProfitSharingNotify($callback)
+    {
+        $request = request();
+        $this->verifyWechatpaySignature($request);
+        $success = strpos((string)$request->post('event_type'), 'PROFITSHARING.') === 0;
+        $data = $this->decrypt($request->post('resource', []));
+
+        $handleResult = call_user_func_array($callback, [json_decode($data), $success]);
+        if (is_bool($handleResult) && $handleResult) {
+            $response = [
+                'code' => 'SUCCESS',
+                'message' => 'OK',
+            ];
+        } else {
+            $response = [
+                'code' => 'FAIL',
+                'message' => $handleResult,
+            ];
+        }
+
+        return response($response, 200, [], 'json');
+    }
+
+    protected function verifyWechatpaySignature($request): void
+    {
+        $timestamp = (string)$request->header('Wechatpay-Timestamp', '');
+        $nonce = (string)$request->header('Wechatpay-Nonce', '');
+        $signature = (string)$request->header('Wechatpay-Signature', '');
+        $body = method_exists($request, 'getContent') ? (string)$request->getContent() : (string)file_get_contents('php://input');
+        if ($timestamp === '' || $nonce === '' || $signature === '' || $body === '') {
+            throw new PayException('微信分账回调验签参数缺失');
+        }
+        $message = $timestamp . "\n" . $nonce . "\n" . $body . "\n";
+        $verified = openssl_verify($message, base64_decode($signature), $this->getPublicKey(), OPENSSL_ALGO_SHA256);
+        if ($verified !== 1) {
+            throw new PayException('微信分账回调验签失败');
+        }
     }
 }

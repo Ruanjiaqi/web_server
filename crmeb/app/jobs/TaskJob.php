@@ -13,6 +13,7 @@ namespace app\jobs;
 
 use app\services\yihaotong\SmsRecordServices;
 use app\services\system\attachment\SystemAttachmentServices;
+use app\services\settlement\OrderSettlementRecordServices;
 use crmeb\basic\BaseJobs;
 use crmeb\traits\QueueTrait;
 
@@ -35,6 +36,12 @@ class TaskJob extends BaseJobs
         /** @var SystemAttachmentServices $attach */
         $attach = app()->make(SystemAttachmentServices::class);
         $attach->emptyYesterdayAttachment();
+        return true;
+    }
+
+    public function fmcgScanWechatProfitSharing(): bool
+    {
+        app()->make(OrderSettlementRecordServices::class)->scanAndShare(50);
         return true;
     }
 }

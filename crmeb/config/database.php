@@ -20,35 +20,47 @@
 
 use think\facade\Env;
 
+$env = static function (string $upper, string $thinkKey, $default = null) {
+    $value = getenv($upper);
+    if ($value !== false && $value !== '') {
+        return $value;
+    }
+    return Env::get($thinkKey, $default);
+};
+
 return [
     // 默认使用的数据库连接配置
-    'default'         => Env::get('database.driver', 'mysql'),
+    'default'         => $env('DB_DRIVER', 'database.driver', 'mysql'),
 
     // 数据库连接配置信息
     'connections'     => [
         'mysql' => [
             // 数据库类型
-            'type'            => Env::get('database.type', 'mysql'),
+            'type'            => $env('DB_TYPE', 'database.type', 'mysql'),
             // 服务器地址
-            'hostname'        => Env::get('database.hostname', '127.0.0.1'),
+            'hostname'        => $env('DB_HOST', 'database.hostname', '127.0.0.1'),
             // 数据库名
-            'database'        => Env::get('database.database', 'crmeb31'),
+            'database'        => $env('DB_DATABASE', 'database.database', 'crmeb31'),
             // 用户名
-            'username'        => Env::get('database.username', 'root'),
+            'username'        => $env('DB_USERNAME', 'database.username', 'root'),
             // 密码
-            'password'        => Env::get('database.password', 'root'),
+            'password'        => $env('DB_PASSWORD', 'database.password', 'root'),
             // 端口
-            'hostport'        => Env::get('database.hostport', '3306'),
+            'hostport'        => $env('DB_PORT', 'database.hostport', '3306'),
             // 连接dsn
             'dsn'             => '',
             // 数据库连接参数
-            'params'          => [],
+            // 微信云托管 MySQL 8.0 默认开启 ONLY_FULL_GROUP_BY，
+            // CRMEB 部分 SQL 的 ORDER BY 列不在 GROUP BY 中，需要移除该模式
+            'params'          => [
+                \PDO::MYSQL_ATTR_INIT_COMMAND => "SET sql_mode='STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'",
+            ],
             // 数据库编码默认采用utf8
-            'charset'         => Env::get('database.charset', 'utf8'),
+            'charset'         => $env('DB_CHARSET', 'database.charset', 'utf8'),
             // 数据库表前缀
-            'prefix'          => Env::get('database.prefix', 'eb_'),
+            'prefix'          => $env('DB_PREFIX', 'database.prefix', 'eb_'),
             // 数据库调试模式
-            'debug'           => Env::get('database.debug', true),
+            'debug'           => $env('DB_DEBUG', 'database.debug', true),
             // 数据库部署方式:0 集中式(单一服务器),1 分布式(主从服务器)
             'deploy'          => 0,
             // 数据库读写是否分离 主从式有效

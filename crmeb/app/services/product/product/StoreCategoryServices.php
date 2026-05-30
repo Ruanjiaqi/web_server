@@ -19,6 +19,8 @@ use crmeb\exceptions\AdminException;
 use crmeb\services\CacheService;
 use crmeb\services\FormBuilder as Form;
 use crmeb\utils\Arr;
+use app\services\distributor\DistributorServices;
+use think\facade\Db;
 use think\facade\Route as Url;
 
 /**
@@ -324,6 +326,51 @@ class StoreCategoryServices extends BaseServices
                 return $this->dao->getCategory();
             });
         }
+    }
+
+    public function getFmcgCategory(array $where, int $uid): array
+    {
+        $binding = $uid > 0 ? app()->make(DistributorServices::class)->userBinding($uid) : [];
+        $distributorId = (int)($binding['bind']['distributor_id'] ?? 0);
+        if ($distributorId <= 0) {
+            return [];
+        }
+        $productIds = Db::name('distributor_sku_inventory')->alias('i')
+            ->leftJoin('store_product p', 'p.id = i.product_id')
+            ->where('i.distributor_id', $distributorId)
+            ->where('p.is_show', 1)
+            ->where('p.is_del', 0)
+            ->whereRaw('i.stock - i.locked_stock > 0')
+            ->group('i.product_id')
+            ->column('i.product_id');
+        if (!$productIds) {
+            return [];
+        }
+        $cateIds = Db::name('store_product_cate')
+            ->whereIn('product_id', $productIds)
+            ->where('status', 1)
+            ->field('cate_id,cate_pid')
+            ->select()
+            ->toArray();
+        $ids = [];
+        foreach ($cateIds as $row) {
+            $ids[] = (int)$row['cate_id'];
+            $ids[] = (int)$row['cate_pid'];
+        }
+        $ids = array_values(array_filter(array_unique($ids)));
+        if (!$ids) {
+            return [];
+        }
+        [$page, $limit] = $this->getPageValue();
+        $query = Db::name('store_category')->where('is_show', 1)->whereIn('id', $ids);
+        if (!empty($where['pid']) || (string)($where['pid'] ?? '') === '0') {
+            $query->where('pid', (int)$where['pid']);
+        }
+        if ($limit) {
+            return $query->field('id,cate_name,pid,pic')->order('sort desc,id desc')->page($page, $limit)->select()->toArray();
+        }
+        $list = $query->field('id,cate_name,pid,pic,big_pic,sort,is_show')->order('sort desc,id desc')->select()->toArray();
+        return get_tree_children($list);
     }
 
     /**

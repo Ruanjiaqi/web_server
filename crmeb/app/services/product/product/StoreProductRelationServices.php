@@ -71,7 +71,7 @@ class StoreProductRelationServices extends BaseServices
      * @email 442384644@qq.com
      * @date 2023/03/01
      */
-    public function getUserCollectProduct(int $uid)
+    public function getUserCollectProduct(int $uid, ?int $distributorId = null)
     {
         $where['uid'] = $uid;
         $where['type'] = 'collect';
@@ -92,6 +92,17 @@ class StoreProductRelationServices extends BaseServices
                 unset($list[$k]);
             }
         }
+        if ($distributorId !== null) {
+            $scope = app()->make(FmcgProductScopeServices::class);
+            $list = $distributorId > 0 ? $scope->filterListByDistributorInventoryField(array_values($list), $distributorId, 'product_id') : [];
+            $count = count($list);
+            return [
+                'list' => $list,
+                'count' => $count,
+                'bind_required' => $distributorId > 0 ? 0 : 1,
+                'distributor_id' => $distributorId,
+            ];
+        }
         $count = $this->dao->count($where);
         return compact('list', 'count');
     }
@@ -104,10 +115,15 @@ class StoreProductRelationServices extends BaseServices
      * @param string $category
      * @return bool
      */
-    public function productRelation(int $productId, int $uid, string $relationType, string $category = 'product')
+    public function productRelation(int $productId, int $uid, string $relationType, string $category = 'product', ?int $distributorId = null)
     {
         $relationType = strtolower($relationType);
         $category = strtolower($category);
+        if ($distributorId !== null && $relationType === 'collect' && $category === 'product') {
+            if ($distributorId <= 0 || !app()->make(FmcgProductScopeServices::class)->productHasDistributorStock($distributorId, $productId)) {
+                throw new ApiException('商品不存在或无库存');
+            }
+        }
         $data = ['uid' => $uid, 'product_id' => $productId, 'type' => $relationType, 'category' => $category];
         if ($this->dao->getOne($data)) {
             return true;
@@ -160,12 +176,23 @@ class StoreProductRelationServices extends BaseServices
      * @param string $category
      * @return bool
      */
-    public function productRelationAll(array $productIdS, int $uid, string $relationType, string $category = 'product')
+    public function productRelationAll(array $productIdS, int $uid, string $relationType, string $category = 'product', ?int $distributorId = null)
     {
         $relationType = strtolower($relationType);
         $category = strtolower($category);
         $relationData = [];
-        $productIdS = array_unique($productIdS);
+        $productIdS = array_values(array_unique(array_filter(array_map('intval', $productIdS))));
+        if (!$productIdS) {
+            return false;
+        }
+        if ($distributorId !== null && $relationType === 'collect' && $category === 'product') {
+            $scope = app()->make(FmcgProductScopeServices::class);
+            foreach ($productIdS as $productId) {
+                if ($distributorId <= 0 || !$scope->productHasDistributorStock($distributorId, $productId)) {
+                    throw new ApiException('商品不存在或无库存');
+                }
+            }
+        }
         $relationProductIdS = $this->dao->getColumn(['uid' => $uid, 'type' => $relationType, 'category' => $category, 'product_id' => $productIdS], 'product_id');
         foreach ($productIdS as $productId) {
             if (!in_array($productId, $relationProductIdS)) {

@@ -284,6 +284,7 @@ class StoreOrderRefundServices extends BaseServices
         //自定义消息-退款成功
         $order['phone'] = $order['user_phone'];
         event('CustomNoticeListener', [$order['uid'], $order, 'order_refund_success']);
+        app()->make(FmcgAfterSaleSettlementServices::class)->onRefundSucceeded($order, (string)($refundData['order_id'] ?? ''));
 
         //自定义事件-后台订单退款
         event('CustomEventListener', ['admin_order_refund_success', [
@@ -714,6 +715,10 @@ class StoreOrderRefundServices extends BaseServices
             $oid = (int)$orderRefundInfo['store_order_id'];
 
             $storeOrderServices->update($oid, ['refund_status' => 0, 'refund_type' => 3]);
+            $order = $storeOrderServices->get($oid);
+            if ($order) {
+                app()->make(FmcgAfterSaleSettlementServices::class)->onRefundCanceled($order, (string)($orderRefundInfo['order_id'] ?? ''));
+            }
             //处理订单商品cart_info
             $this->cancelOrderRefundCartInfo($id, $oid, $orderRefundInfo, '不退款原因:' . ($data['refuse_reason'] ?? ''));
             //记录
@@ -1061,6 +1066,7 @@ class StoreOrderRefundServices extends BaseServices
             return $res1 && $res2 && $res3 && $res4;
         });
         $storeOrderCartInfoServices->clearOrderCartInfo($order['id']);
+        app()->make(FmcgAfterSaleSettlementServices::class)->onRefundApplied($order, (string)$refundData['order_id']);
         //申请退款事件
         event('OrderRefundCreateAfterListener', [$order]);
         //提醒推送

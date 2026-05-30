@@ -11,6 +11,7 @@
 namespace app\api\controller\v1\store;
 
 use app\Request;
+use app\services\product\product\FmcgProductScopeServices;
 use app\services\product\product\StoreCategoryServices;
 use app\services\product\product\StoreProductReplyServices;
 use app\services\product\product\StoreProductServices;
@@ -98,8 +99,16 @@ class StoreProductController
         }
         $type = 'big';
         $field = ['image', 'recommend_image'];
-        $list = $this->services->getGoodsList($where, (int)$request->uid());
-        return app('json')->success(get_thumb_water($list, $type, $field));
+        $scope = app()->make(FmcgProductScopeServices::class);
+        $distributorId = $scope->boundDistributorId($request);
+        if ($distributorId <= 0) {
+            return app('json')->header(['Fmcg-Bind-Required' => '1'])->success([]);
+        }
+        $list = $scope->filterListByDistributorInventory($this->services->getGoodsList($where, (int)$request->uid()), $distributorId);
+        return app('json')->header([
+            'Fmcg-Bind-Required' => '0',
+            'Fmcg-Distributor-Id' => (string)$distributorId,
+        ])->success(get_thumb_water($list, $type, $field));
     }
 
     /**
@@ -131,7 +140,16 @@ class StoreProductController
      */
     public function detail(Request $request, $id, $type = 0)
     {
+        $scope = app()->make(FmcgProductScopeServices::class);
+        $distributorId = $scope->boundDistributorId($request);
+        if ($distributorId <= 0) {
+            return app('json')->success(['bind_required' => 1]);
+        }
+        if (!$scope->productHasDistributorStock($distributorId, (int)$id)) {
+            return app('json')->fail('商品不在当前分销商库存中');
+        }
         $data = $this->services->productDetail($request, (int)$id, (int)$type);
+        $data = $scope->trimDetailByDistributorInventory($data, $distributorId, (int)$id);
         return app('json')->success($data);
     }
 
@@ -146,8 +164,16 @@ class StoreProductController
     public function product_hot(Request $request)
     {
         $vip_user = $request->uid() ? app()->make(UserServices::class)->value(['uid' => $request->uid()], 'is_money_level') : 0;
-        $list = $this->services->getProducts(['is_hot' => 1, 'is_show' => 1, 'is_del' => 0, 'vip_user' => $vip_user]);
-        return app('json')->success(get_thumb_water($list, 'mid'));
+        $scope = app()->make(FmcgProductScopeServices::class);
+        $distributorId = $scope->boundDistributorId($request);
+        if ($distributorId <= 0) {
+            return app('json')->header(['Fmcg-Bind-Required' => '1'])->success([]);
+        }
+        $list = $scope->filterListByDistributorInventory($this->services->getProducts(['is_hot' => 1, 'is_show' => 1, 'is_del' => 0, 'vip_user' => $vip_user]), $distributorId);
+        return app('json')->header([
+            'Fmcg-Bind-Required' => '0',
+            'Fmcg-Distributor-Id' => (string)$distributorId,
+        ])->success(get_thumb_water($list, 'mid'));
     }
 
     /**
@@ -178,6 +204,16 @@ class StoreProductController
         } else if ($type == 5) {//TODO 会员商品
             $info['list'] = $this->services->getRecommendProduct($request->uid(), 'is_vip');//TODO 会员商品
         }
+        $scope = app()->make(FmcgProductScopeServices::class);
+        $distributorId = $scope->boundDistributorId($request);
+        if ($distributorId <= 0) {
+            $info['bind_required'] = 1;
+            $info['list'] = [];
+            return app('json')->success($info);
+        }
+        $info['bind_required'] = 0;
+        $info['distributor_id'] = $distributorId;
+        $info['list'] = $scope->filterListByDistributorInventory($info['list'], $distributorId);
         return app('json')->success($info);
     }
 
@@ -243,4 +279,5 @@ class StoreProductController
         if (!$id || !$unique) return app('json')->fail('缺少参数');
         return app('json')->success($this->services->realPrice($uid, $id, $unique));
     }
+
 }

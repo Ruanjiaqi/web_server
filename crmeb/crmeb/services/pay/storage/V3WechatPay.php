@@ -12,6 +12,7 @@
 namespace crmeb\services\pay\storage;
 
 use app\services\pay\PayServices;
+use app\services\settlement\OrderSettlementRecordServices;
 use app\services\system\SystemPemServices;
 use crmeb\exceptions\PayException;
 use crmeb\services\app\MiniProgramService;
@@ -65,7 +66,9 @@ class V3WechatPay extends BasePay implements PayInterface
                 'serial_no' => sys_config('pay_weixin_serial_no'),
                 'cert_path' => $this->getPemPath('pay_weixin_client_cert'),
                 'key_path' => $this->getPemPath('pay_weixin_client_key'),
-                'notify_url' => trim(sys_config('site_url')) . '/api/pay/notify/v3wechat',
+                'notify_url' => trim(sys_config('fmcg_wechat_pay_notify_url') ?: sys_config('site_url') . '/api/pay/notify/v3wechat'),
+                'profit_sharing_notify_url' => trim(sys_config('fmcg_wechat_profit_sharing_notify_url') ?: sys_config('site_url') . '/api/pay/notify/profit_sharing'),
+                'site_url' => trim(sys_config('site_url')),
                 'v3_pay_public_key' => sys_config('v3_pay_public_key'),
                 'v3_pay_public_pem' => $this->getPemPath('v3_pay_public_pem'),
             ]
@@ -219,6 +222,31 @@ class V3WechatPay extends BasePay implements PayInterface
         return $this->instance->v3pay->queryRefund($outTradeNo);
     }
 
+    public function profitSharingAddReceiver(array $receiver)
+    {
+        return $this->instance->v3pay->profitSharingAddReceiver($receiver);
+    }
+
+    public function profitSharingOrders(string $transactionId, string $outOrderNo, array $receivers, bool $unfreezeUnsplit = false)
+    {
+        return $this->instance->v3pay->profitSharingOrders($transactionId, $outOrderNo, $receivers, $unfreezeUnsplit);
+    }
+
+    public function profitSharingQuery(string $transactionId, string $outOrderNo)
+    {
+        return $this->instance->v3pay->profitSharingQuery($transactionId, $outOrderNo);
+    }
+
+    public function profitSharingFinish(string $transactionId, string $outOrderNo, string $description)
+    {
+        return $this->instance->v3pay->profitSharingFinish($transactionId, $outOrderNo, $description);
+    }
+
+    public function profitSharingReturn(string $outOrderNo, string $outReturnNo, string $returnMchid, int $amount, string $description)
+    {
+        return $this->instance->v3pay->profitSharingReturn($outOrderNo, $outReturnNo, $returnMchid, $amount, $description);
+    }
+
     /**
      * @return mixed|\think\Response
      * @author 等风来
@@ -254,6 +282,19 @@ class V3WechatPay extends BasePay implements PayInterface
                     'fail_reason' => $notify->fail_reason ?? ''
                 ];
                 return Event::until('NotifyListener', [$data, PayServices::WEIXIN_PAY]);
+            }
+
+            return false;
+        });
+    }
+
+    public function handleProfitSharingNotify()
+    {
+        return $this->instance->v3pay->handleProfitSharingNotify(function ($notify, $successful) {
+            if ($successful) {
+                $data = json_decode(json_encode($notify), true) ?: [];
+                app()->make(OrderSettlementRecordServices::class)->handleProfitSharingNotify($data);
+                return true;
             }
 
             return false;

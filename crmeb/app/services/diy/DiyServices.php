@@ -19,6 +19,7 @@ use app\services\BaseServices;
 use app\dao\diy\DiyDao;
 use app\services\other\QrcodeServices;
 use app\services\product\product\StoreProductServices;
+use app\services\product\product\FmcgProductScopeServices;
 use app\services\system\config\SystemGroupDataServices;
 use app\services\system\config\SystemGroupServices;
 use crmeb\exceptions\AdminException;
@@ -309,6 +310,7 @@ class DiyServices extends BaseServices
         foreach ($data['list'] as &$item) {
             $item['image'] = set_file_url($item['image'], sys_config('site_url'));
         }
+        $data = app()->make(FmcgProductScopeServices::class)->filterHomeData($data, $uid);
         return $data;
     }
 

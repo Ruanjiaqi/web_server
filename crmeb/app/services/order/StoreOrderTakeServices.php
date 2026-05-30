@@ -143,6 +143,7 @@ class StoreOrderTakeServices extends BaseServices
 
         if ($res) {
             try {
+                app()->make(FmcgOrderAdapterServices::class)->afterOrderReceived($order);
                 // 收货成功后置队列
                 event('OrderTakeListener', [$order, $userInfo, $storeTitle]);
                 //收货给用户发送消息

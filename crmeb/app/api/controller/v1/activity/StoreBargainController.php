@@ -14,6 +14,7 @@ use app\services\activity\bargain\StoreBargainServices;
 use app\services\activity\bargain\StoreBargainUserHelpServices;
 use app\services\activity\bargain\StoreBargainUserServices;
 use app\Request;
+use app\services\product\product\FmcgProductScopeServices;
 use app\services\user\UserServices;
 
 /**
@@ -48,7 +49,8 @@ class StoreBargainController
      */
     public function lst(Request $request)
     {
-        $bargainList = $this->services->getBargainList();
+        $distributorId = app()->make(FmcgProductScopeServices::class)->boundDistributorId($request);
+        $bargainList = $this->services->getBargainList($distributorId);
         return app('json')->success(get_thumb_water($bargainList));
     }
 

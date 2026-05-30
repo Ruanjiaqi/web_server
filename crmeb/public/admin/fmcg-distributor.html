@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>FMCG 分销管理</title>
+  <style>
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f4f6f9; color: #172033; }
+    header { padding: 16px 22px; background: #fff; border-bottom: 1px solid #d9dee8; display: flex; gap: 12px; align-items: center; justify-content: space-between; }
+    h1 { margin: 0; font-size: 20px; }
+    main { padding: 18px 22px; display: grid; gap: 16px; }
+    section { background: #fff; border: 1px solid #d9dee8; border-radius: 6px; padding: 14px; }
+    h2 { margin: 0 0 12px; font-size: 16px; }
+    .bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; align-items: center; }
+    input, select, button { height: 32px; border: 1px solid #c9d1df; border-radius: 4px; padding: 0 9px; background: #fff; color: #172033; }
+    button { background: #165dff; color: #fff; border-color: #165dff; cursor: pointer; }
+    button.secondary { background: #fff; color: #165dff; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { padding: 8px; border-bottom: 1px solid #e6eaf1; text-align: left; vertical-align: top; }
+    th { background: #f8fafc; font-weight: 600; }
+    code { background: #eef2ff; padding: 2px 5px; border-radius: 4px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 16px; }
+    .msg { color: #596579; font-size: 13px; min-height: 18px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>FMCG 分销管理</h1>
+    <div class="bar">
+      <input id="token" placeholder="Bearer Token">
+      <button class="secondary" onclick="saveToken()">保存 Token</button>
+    </div>
+  </header>
+  <main>
+    <section>
+      <h2>分销商列表</h2>
+      <div class="bar">
+        <input id="distKeyword" placeholder="名称/手机号">
+        <select id="distMode"><option value="">全部模式</option><option value="commission">佣金模式</option><option value="consignment">代销模式</option></select>
+        <button onclick="loadDistributors()">查询</button><span class="msg" id="distMsg"></span>
+      </div>
+      <div id="distTable"></div>
+    </section>
+
+    <div class="grid">
+      <section>
+        <h2>佣金申请</h2>
+        <div class="bar">
+          <select id="applyStatus"><option value="">全部</option><option value="0">待审</option><option value="1">通过</option><option value="-1">拒绝</option></select>
+          <button onclick="loadApplications()">查询</button><span class="msg" id="applyMsg"></span>
+        </div>
+        <div id="applyTable"></div>
+      </section>
+      <section>
+        <h2>佣金结算</h2>
+        <div class="bar">
+          <input id="commissionDistributorId" placeholder="分销商ID">
+          <input id="refundDays" value="7" placeholder="退款保护天数">
+          <button onclick="loadEligibleOrders()">可结算订单</button>
+          <button onclick="settleCommission()">生成结算</button>
+          <span class="msg" id="commissionMsg"></span>
+        </div>
+        <div id="commissionTable"></div>
+      </section>
+      <section>
+        <h2>佣金规则</h2>
+        <div class="bar">
+          <input id="ruleDistributorId" placeholder="分销商ID">
+          <input id="ruleProductId" placeholder="商品ID">
+          <input id="ruleUnique" placeholder="SKU">
+          <input id="ruleRate" placeholder="佣金比例">
+          <select id="ruleStatus"><option value="1">启用</option><option value="0">停用</option></select>
+          <button onclick="saveRule()">保存</button>
+          <button onclick="loadRules()">查询</button>
+          <span class="msg" id="ruleMsg"></span>
+        </div>
+        <div id="ruleTable"></div>
+      </section>
+      <section>
+        <h2>佣金结算单</h2>
+        <div class="bar">
+          <input id="commissionSettlementDistributorId" placeholder="分销商ID">
+          <select id="commissionSettlementStatus"><option value="">全部</option><option value="pending">待结算</option><option value="paid">已结算</option><option value="rejected">已驳回</option></select>
+          <button onclick="loadCommissionSettlements()">查询</button>
+          <span class="msg" id="commissionSettlementMsg"></span>
+        </div>
+        <div id="commissionSettlementTable"></div>
+      </section>
+    </div>
+
+    <section>
+      <h2>订货单</h2>
+      <div class="bar">
+        <input id="purchaseDistributorId" placeholder="分销商ID">
+        <select id="purchaseStatus"><option value="">全部</option><option value="pending_pay">待支付</option><option value="paid">已支付</option><option value="shipped">已发货</option><option value="finished">已完结</option></select>
+        <button onclick="loadPurchases()">查询</button><span class="msg" id="purchaseMsg"></span>
+      </div>
+      <div id="purchaseTable"></div>
+    </section>
+
+    <div class="grid">
+      <section>
+        <h2>库存只读</h2>
+        <div class="bar"><input id="inventoryKeyword" placeholder="商品/分销商"><button onclick="loadInventory()">查询</button><span class="msg" id="inventoryMsg"></span></div>
+        <div id="inventoryTable"></div>
+      </section>
+      <section>
+        <h2>配送费记录</h2>
+        <div class="bar">
+          <select id="deliveryStatus"><option value="">全部</option><option value="pending">待结算</option><option value="settled">已结算</option><option value="failed">失败</option></select>
+          <input id="deliveryBatchNo" placeholder="结算批次">
+          <input id="deliveryPaymentNo" placeholder="付款流水">
+          <input id="deliveryFailReason" placeholder="失败原因">
+          <button onclick="loadDeliveryFees()">查询</button><span class="msg" id="deliveryMsg"></span>
+        </div>
+        <div id="deliveryTable"></div>
+      </section>
+      <section>
+        <h2>分账记录</h2>
+        <div class="bar"><select id="settlementStatus"><option value="">全部</option><option value="pending">待分账</option><option value="success">成功</option><option value="failed">失败</option></select><button onclick="loadSettlements()">查询</button><button onclick="scanSettlementSharing()">扫描待分账</button><span class="msg" id="settlementMsg"></span></div>
+        <div id="settlementTable"></div>
+      </section>
+      <section>
+        <h2>买赠活动</h2>
+        <div class="bar">
+          <input id="campaignId" placeholder="ID">
+          <input id="campaignTitle" placeholder="标题">
+          <input id="campaignProductId" placeholder="商品ID">
+          <input id="campaignBuyNum" value="1" placeholder="买几件">
+          <input id="campaignGiftNum" value="1" placeholder="送几件">
+          <input id="campaignQuota" value="0" placeholder="名额">
+          <input id="campaignStart" placeholder="开始时间">
+          <input id="campaignEnd" placeholder="结束时间">
+          <select id="campaignStatus"><option value="1">启用</option><option value="0">停用</option></select>
+          <button onclick="saveCampaign()">发布/编辑</button>
+          <button onclick="loadCampaigns()">查询</button><span class="msg" id="campaignMsg"></span>
+        </div>
+        <div id="campaignTable"></div>
+      </section>
+    </div>
+  </main>
+  <script>
+    const apiBase = '/adminapi/distributor/';
+    const defaultPage = { page: 1, limit: 20 };
+    const state = { eligibleOrderIds: [] };
+    token.value = localStorage.getItem('fmcg_admin_token') || '';
+    function saveToken() { localStorage.setItem('fmcg_admin_token', token.value.trim()); }
+    async function api(path, options = {}) {
+      const headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers || {});
+      const auth = token.value.trim();
+      if (auth) {
+        const bearer = auth.startsWith('Bearer ') ? auth : 'Bearer ' + auth;
+        headers['Authori-zation'] = bearer;
+        headers.Authorization = bearer;
+      }
+      const res = await fetch(apiBase + path, Object.assign({}, options, { headers }));
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json.status === 400 || json.status === 410000) throw new Error(json.msg || '请求失败');
+      return json.data || json;
+    }
+    function qs(obj) { return new URLSearchParams(Object.entries(obj).filter(([, v]) => v !== '' && v != null)).toString(); }
+    function pageQs(obj) { return qs(Object.assign({}, defaultPage, obj || {})); }
+    function table(rows, cols) {
+      if (!rows || !rows.length) return '<div class="msg">暂无数据</div>';
+      return '<table><thead><tr>' + cols.map(c => '<th>' + c[0] + '</th>').join('') + '</tr></thead><tbody>' + rows.map(r => '<tr>' + cols.map(c => '<td>' + (typeof c[1] === 'function' ? c[1](r) : (r[c[1]] ?? '')) + '</td>').join('') + '</tr>').join('') + '</tbody></table>';
+    }
+    async function run(msgId, fn) { try { document.getElementById(msgId).textContent = '加载中'; await fn(); document.getElementById(msgId).textContent = '完成'; } catch (e) { document.getElementById(msgId).textContent = e.message; } }
+    function postButton(label, path, body, reload) { return `<button onclick='postAction("${path}", ${JSON.stringify(body)}, ${reload ? JSON.stringify(reload) : 'null'})'>${label}</button>`; }
+    async function postAction(path, body, reload) { await api(path, { method: 'POST', body: JSON.stringify(body || {}) }); if (reload && window[reload]) window[reload](); }
+    function loadDistributors() { return run('distMsg', async () => { const d = await api('list?' + pageQs({ keyword: distKeyword.value, cooperation_mode: distMode.value })); distTable.innerHTML = table(d.list || [], [['ID','id'], ['店铺','store_name'], ['模式','cooperation_mode'], ['联系人','contact_name'], ['电话','phone'], ['状态','status'], ['操作', r => r.cooperation_mode === 'commission' ? `<button onclick="commissionDistributorId.value=${r.id};loadEligibleOrders()">佣金结算</button>` : '']]); }); }
+    function loadApplications() { return run('applyMsg', async () => { const d = await api('commission/apply?' + pageQs({ status: applyStatus.value })); applyTable.innerHTML = table(d.list || [], [['ID','id'], ['姓名','real_name'], ['电话','phone'], ['状态','status'], ['操作', r => postButton('通过', `commission/apply/${r.id}/review`, { status: 1 }, 'loadApplications') + ' ' + postButton('拒绝', `commission/apply/${r.id}/review`, { status: 2, reason: '后台拒绝' }, 'loadApplications')]]); }); }
+    function loadEligibleOrders() { return run('commissionMsg', async () => { const id = commissionDistributorId.value; const rows = await api(`${id}/commission/eligible_orders?` + pageQs({ refund_days: refundDays.value })); state.eligibleOrderIds = rows.map(r => r.order_id); commissionTable.innerHTML = table(rows, [['订单号','order_id'], ['支付金额','pay_price'], ['邮费','pay_postage'], ['支付时间','pay_time'], ['状态','status']]); }); }
+    function settleCommission() { return run('commissionMsg', async () => { await api(`${commissionDistributorId.value}/commission/settle`, { method: 'POST', body: JSON.stringify({ order_ids: state.eligibleOrderIds, refund_days: refundDays.value }) }); await loadEligibleOrders(); await loadCommissionSettlements(); }); }
+    function loadRules() { return run('ruleMsg', async () => { const d = await api('commission/rule/list?' + pageQs({ distributor_id: ruleDistributorId.value, status: ruleStatus.value })); ruleTable.innerHTML = table(d.list || [], [['ID','id'], ['分销商','distributor_id'], ['商品','product_id'], ['SKU','unique'], ['比例','rate'], ['状态','status']]); }); }
+    function saveRule() { return run('ruleMsg', async () => { await api('commission/rule/save', { method: 'POST', body: JSON.stringify({ distributor_id: ruleDistributorId.value || 0, product_id: ruleProductId.value || 0, unique: ruleUnique.value, rate: ruleRate.value || 0, status: ruleStatus.value }) }); await loadRules(); }); }
+    function loadCommissionSettlements() { return run('commissionSettlementMsg', async () => { const d = await api('commission/settlement/list?' + pageQs({ distributor_id: commissionSettlementDistributorId.value, status: commissionSettlementStatus.value })); commissionSettlementTable.innerHTML = table(d.list || [], [['ID','id'], ['订单','order_id'], ['分销商','distributor_id'], ['金额','amount'], ['状态','status'], ['操作', r => postButton('已结算', `commission/settlement/${r.id}/status`, { status: 'paid' }, 'loadCommissionSettlements') + ' ' + postButton('驳回', `commission/settlement/${r.id}/status`, { status: 'rejected' }, 'loadCommissionSettlements')]]); }); }
+    function loadPurchases() { return run('purchaseMsg', async () => { const d = await api('purchase/list?' + pageQs({ distributor_id: purchaseDistributorId.value, status: purchaseStatus.value })); purchaseTable.innerHTML = table(d.list || [], [['ID','id'], ['单号','order_no'], ['分销商','distributor_id'], ['金额','total_amount'], ['状态','status'], ['操作', r => postButton('确认支付', `purchase/${r.id}/pay`, { pay_no: 'offline-' + Date.now() }, 'loadPurchases') + ' ' + postButton('发货', `purchase/${r.id}/ship`, { delivery_type: 'offline' }, 'loadPurchases')]]); }); }
+    function loadInventory() { return run('inventoryMsg', async () => { const d = await api('inventory/list?' + pageQs({ keyword: inventoryKeyword.value })); inventoryTable.innerHTML = table(d.list || [], [['ID','id'], ['分销商','distributor_name'], ['商品','product_name'], ['SKU','unique'], ['库存','stock'], ['锁定','locked_stock'], ['预警','warning_stock']]); }); }
+    function deliveryBody(status, r) { return { status, receiver: r.receiver || '', settlement_batch_no: deliveryBatchNo.value, payment_no: deliveryPaymentNo.value || ('manual-' + Date.now()), fail_reason: deliveryFailReason.value || '总部人工结算失败' }; }
+    function loadDeliveryFees() { return run('deliveryMsg', async () => { const d = await api('delivery_fee/list?' + pageQs({ status: deliveryStatus.value })); deliveryTable.innerHTML = table(d.list || [], [['ID','id'], ['订单','order_id'], ['分销商','distributor_name'], ['方式','delivery_type'], ['费用','fee'], ['接收方','receiver'], ['批次','settlement_batch_no'], ['付款流水','payment_no'], ['失败原因','fail_reason'], ['状态','status'], ['操作', r => postButton('人工结算', `delivery_fee/${r.id}/status`, deliveryBody('settled', r), 'loadDeliveryFees') + ' ' + postButton('记为失败', `delivery_fee/${r.id}/status`, deliveryBody('failed', r), 'loadDeliveryFees')]]); }); }
+    function loadSettlements() { return run('settlementMsg', async () => { const d = await api('settlement/list?' + pageQs({ status: settlementStatus.value })); settlementTable.innerHTML = table(d.list || [], [['ID','id'], ['订单','order_id'], ['分销商','distributor_name'], ['金额','amount'], ['配送费','delivery_fee'], ['状态','status'], ['操作', r => postButton('发起微信分账', `settlement/${r.id}/share`, {}, 'loadSettlements')]]); }); }
+    function scanSettlementSharing() { return run('settlementMsg', async () => { await api('settlement/scan_share', { method: 'POST', body: JSON.stringify({ limit: 50 }) }); await loadSettlements(); }); }
+    function editCampaign(r) { campaignId.value = r.id; campaignTitle.value = r.title || ''; campaignProductId.value = r.product_id || ''; campaignBuyNum.value = r.buy_num || 1; campaignGiftNum.value = r.gift_num || 1; campaignQuota.value = r.quota || 0; campaignStart.value = r.start_time || ''; campaignEnd.value = r.end_time || ''; campaignStatus.value = String(r.status ?? 1); }
+    function saveCampaign() { return run('campaignMsg', async () => { await api('buy_x_get_x/save', { method: 'POST', body: JSON.stringify({ id: campaignId.value || 0, title: campaignTitle.value, product_id: campaignProductId.value || 0, buy_num: campaignBuyNum.value || 1, gift_num: campaignGiftNum.value || 1, quota: campaignQuota.value || 0, start_time: campaignStart.value || 0, end_time: campaignEnd.value || 0, status: campaignStatus.value }) }); campaignId.value = ''; await loadCampaigns(); }); }
+    function loadCampaigns() { return run('campaignMsg', async () => { const d = await api('buy_x_get_x/list?' + pageQs()); campaignTable.innerHTML = table(d.list || [], [['ID','id'], ['标题','title'], ['商品','product_id'], ['买','buy_num'], ['送','gift_num'], ['名额','quota'], ['开始','start_time'], ['结束','end_time'], ['状态','status'], ['操作', r => `<button onclick='editCampaign(${JSON.stringify(r)})'>编辑</button> ` + postButton(r.status == 1 ? '停用' : '启用', 'buy_x_get_x/save', Object.assign({}, r, { status: r.status == 1 ? 0 : 1 }), 'loadCampaigns')]]); }); }
+    loadDistributors(); loadApplications(); loadRules(); loadCommissionSettlements(); loadPurchases(); loadInventory(); loadDeliveryFees(); loadSettlements();
+  </script>
+</body>
+</html>

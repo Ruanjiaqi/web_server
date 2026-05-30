@@ -18,6 +18,7 @@ use app\services\order\StoreOrderInvoiceServices;
 use app\services\order\StoreOrderServices;
 use app\services\order\StoreOrderTakeServices;
 use app\services\product\product\StoreProductServices;
+use app\services\settlement\OrderSettlementRecordServices;
 use app\services\system\attachment\SystemAttachmentServices;
 use app\services\user\UserSignServices;
 use think\facade\Log;
@@ -46,6 +47,7 @@ class CrontabRunServices
         'clearPoster' => '清除昨日海报',
         'autoInvoice' => '自动开具发票以及退款自动冲红',
         'signRemind' => '未签到提醒',
+        'fmcgWechatProfitSharing' => 'FMCG微信分账扫描',
         'customTimer' => '自定义定时任务',
     ];
 
@@ -251,6 +253,16 @@ class CrontabRunServices
             $this->crontabLog(' 执行未签到提醒');
         } catch (\Throwable $e) {
             $this->crontabLog('未签到提醒失败,失败原因:' . $e->getMessage());
+        }
+    }
+
+    public function fmcgWechatProfitSharing()
+    {
+        try {
+            app()->make(OrderSettlementRecordServices::class)->scanAndShare(50);
+            $this->crontabLog(' 执行FMCG微信分账扫描');
+        } catch (\Throwable $e) {
+            $this->crontabLog('FMCG微信分账扫描失败,失败原因:' . $e->getMessage());
         }
     }
 

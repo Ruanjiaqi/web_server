@@ -12,6 +12,7 @@ namespace app\listener\order;
 
 use app\services\order\StoreOrderStatusServices;
 use app\services\order\StoreOrderTakeServices;
+use app\services\settlement\OrderSettlementRecordServices;
 use app\services\user\UserBillServices;
 use crmeb\interfaces\ListenerInterface;
 use think\facade\Log;
@@ -41,6 +42,8 @@ class OrderTakeListener implements ListenerInterface
                 'change_message' => '已收货',
                 'change_time' => time()
             ]);
+
+            app()->make(OrderSettlementRecordServices::class)->createEligibleForOrder($order);
 
             //检查主订单是否需要修改状态
             if ($order['pid'] > 0) {

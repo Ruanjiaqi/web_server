@@ -11,7 +11,7 @@
 namespace app\api\controller\v1\store;
 
 use app\services\product\product\StoreCategoryServices;
-use think\Request;
+use app\Request;
 
 /**
  * Class CategoryController
@@ -39,7 +39,7 @@ class CategoryController
         $where = $request->getMore([
             ['pid', 0],
         ]);
-        $category = $this->services->getCategory($where);
+        $category = $this->services->getFmcgCategory($where, (int)$request->uid());
         return app('json')->success($category);
     }
 

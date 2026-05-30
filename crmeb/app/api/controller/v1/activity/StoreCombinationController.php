@@ -14,6 +14,7 @@ use app\Request;
 use app\services\activity\combination\StoreCombinationServices;
 use app\services\activity\combination\StorePinkServices;
 use app\services\other\QrcodeServices;
+use app\services\product\product\FmcgProductScopeServices;
 
 /**
  * 拼团类
@@ -33,9 +34,10 @@ class StoreCombinationController
      * 拼团列表
      * @return mixed
      */
-    public function lst()
+    public function lst(Request $request)
     {
-        $list = $this->services->getCombinationList();
+        $distributorId = app()->make(FmcgProductScopeServices::class)->boundDistributorId($request);
+        $list = $this->services->getCombinationList($distributorId);
         return app('json')->success(get_thumb_water($list));
     }
 

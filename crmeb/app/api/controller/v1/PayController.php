@@ -39,6 +39,8 @@ class PayController
                 return $pay->handleNotify();
             case 'v3wechat':
                 return app()->make(Pay::class, ['v3_wechat_pay'])->handleNotify()->getContent();
+            case 'profit_sharing':
+                return app()->make(Pay::class, ['v3_wechat_pay'])->handleProfitSharingNotify()->getContent();
             case 'routine':
                 return MiniProgramService::handleNotify();
             case 'wechat':

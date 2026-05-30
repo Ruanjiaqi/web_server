@@ -11,6 +11,7 @@
 namespace app\api\controller\v1\user;
 
 use app\Request;
+use app\services\product\product\FmcgProductScopeServices;
 use app\services\product\product\StoreProductRelationServices;
 
 
@@ -41,7 +42,8 @@ class UserCollectController
     public function collect_user(Request $request)
     {
         $uid = (int)$request->uid();
-        return app('json')->success($this->services->getUserCollectProduct($uid));
+        $distributorId = app()->make(FmcgProductScopeServices::class)->boundDistributorId($request);
+        return app('json')->success($this->services->getUserCollectProduct($uid, $distributorId));
     }
 
     /**
@@ -56,7 +58,9 @@ class UserCollectController
             ['category', 'product']
         ], true);
         if (!$id || !is_numeric($id)) return app('json')->fail('参数错误');
-        $res = $this->services->productRelation((int)$id, $request->uid(), 'collect', $category);
+        $distributorId = app()->make(FmcgProductScopeServices::class)->boundDistributorId($request);
+        if ($distributorId <= 0) return app('json')->fail('请先绑定分销商');
+        $res = $this->services->productRelation((int)$id, $request->uid(), 'collect', $category, $distributorId);
         if (!$res) {
             return app('json')->fail('收藏失败');
         } else {
@@ -99,7 +103,9 @@ class UserCollectController
         }
         $uid = (int)$request->uid();
         $productIdS = $collectInfo['id'];
-        $res = $this->services->productRelationAll($productIdS, $uid, 'collect', $collectInfo['category']);
+        $distributorId = app()->make(FmcgProductScopeServices::class)->boundDistributorId($request);
+        if ($distributorId <= 0) return app('json')->fail('请先绑定分销商');
+        $res = $this->services->productRelationAll($productIdS, $uid, 'collect', $collectInfo['category'], $distributorId);
         if (!$res) {
             return app('json')->fail('收藏失败');
         } else {

@@ -19,6 +19,7 @@ use app\services\order\StoreOrderServices;
 use app\services\other\QrcodeServices;
 use app\services\product\product\StoreCategoryServices;
 use app\services\product\product\StoreDescriptionServices;
+use app\services\product\product\FmcgProductScopeServices;
 use app\services\product\product\StoreProductRelationServices;
 use app\services\product\product\StoreProductReplyServices;
 use app\services\product\product\StoreProductServices;
@@ -417,10 +418,14 @@ class StoreSeckillServices extends BaseServices
      * @throws \think\db\exception\DbException
      * @throws \think\db\exception\ModelNotFoundException
      */
-    public function getListByTime(int $time)
+    public function getListByTime(int $time, int $distributorId = 0)
     {
+        if ($distributorId <= 0) {
+            return [];
+        }
         [$page, $limit] = $this->getPageValue();
         $seckillInfo = $this->dao->getListByTime($time, $page, $limit);
+        $seckillInfo = app()->make(FmcgProductScopeServices::class)->filterListByDistributorInventoryField($seckillInfo, $distributorId, 'product_id');
         if (count($seckillInfo)) {
             foreach ($seckillInfo as $key => &$item) {
                 if ($item['quota'] > 0) {
@@ -455,6 +460,14 @@ class StoreSeckillServices extends BaseServices
             throw new ApiException('商品不存在');
         } else {
             $storeInfo = $storeInfo->toArray();
+        }
+        $scope = app()->make(FmcgProductScopeServices::class);
+        $distributorId = $scope->boundDistributorId($request);
+        if ($distributorId <= 0) {
+            return ['bind_required' => 1, 'distributor_id' => 0];
+        }
+        if (!$scope->productHasDistributorStock($distributorId, (int)$storeInfo['product_id'])) {
+            throw new ApiException('商品不存在或无库存');
         }
         $siteUrl = sys_config('site_url');
         $storeInfo['image'] = set_file_url($storeInfo['image'], $siteUrl);

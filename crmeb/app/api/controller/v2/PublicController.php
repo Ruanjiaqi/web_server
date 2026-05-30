@@ -14,6 +14,7 @@ namespace app\api\controller\v2;
 
 use app\Request;
 use app\services\diy\DiyServices;
+use app\services\product\product\FmcgProductScopeServices;
 use app\services\product\product\StoreCategoryServices;
 use app\services\product\product\StoreProductServices;
 use app\services\user\UserServices;
@@ -35,6 +36,11 @@ class PublicController
         $info['fastList'] = $fastNumber ? $categoryService->byIndexList($fastNumber, 'id,cate_name,pid,pic') : [];//TODO 快速选择分类个数
         /** @var StoreProductServices $storeProductServices */
         $storeProductServices = app()->make(StoreProductServices::class);
+        /** @var FmcgProductScopeServices $scope */
+        $scope = app()->make(FmcgProductScopeServices::class);
+        if ($scope->boundDistributorId($request) <= 0) {
+            header('Fmcg-Bind-Required: 1');
+        }
         //获取推荐商品
         [$baseList, $firstList, $benefit, $likeInfo, $vipList] = $storeProductServices->getRecommendProductArr((int)$request->uid(), ['is_best', 'is_new', 'is_benefit', 'is_hot']);
         $info['bastList'] = $baseList;//TODO 精品推荐个数

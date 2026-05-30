@@ -11,6 +11,7 @@
 namespace app\api\controller\v1\order;
 
 use app\Request;
+use app\services\order\FmcgAfterSaleSettlementServices;
 use app\services\order\StoreOrderRefundServices;
 use app\services\order\StoreOrderServices;
 use think\db\exception\DataNotFoundException;
@@ -83,6 +84,10 @@ class StoreOrderRefundController
         }
         $this->services->update($orderRefund['id'], ['is_cancel' => 1]);
         $this->services->cancelOrderRefundCartInfo((int)$orderRefund['id'], (int)$orderRefund['store_order_id'], $orderRefund);
+        $order = app()->make(StoreOrderServices::class)->get((int)$orderRefund['store_order_id']);
+        if ($order) {
+            app()->make(FmcgAfterSaleSettlementServices::class)->onRefundCanceled($order, (string)$orderRefund['order_id']);
+        }
 
         //自定义事件-用户取消退款
         event('CustomEventListener', ['order_refund_cancel', [

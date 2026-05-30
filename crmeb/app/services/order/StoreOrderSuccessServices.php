@@ -124,6 +124,9 @@ class StoreOrderSuccessServices extends BaseServices
         ]]);
 
         $res = $res1 && $resPink;
+        if (false !== $res && !empty($orderInfo['order_id'])) {
+            app()->make(FmcgOrderAdapterServices::class)->afterOrderPaid((string)$orderInfo['order_id']);
+        }
         return false !== $res;
     }
 

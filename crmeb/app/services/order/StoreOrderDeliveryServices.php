@@ -504,6 +504,7 @@ class StoreOrderDeliveryServices extends BaseServices
         event('OrderShippingListener', ['product', $orderInfo, $type, $data['delivery_id'], $data['delivery_name']]);
         //到期自动收货
         event('OrderDeliveryListener', [$orderInfo, $storeName, $data, $type]);
+        app()->make(FmcgOrderAdapterServices::class)->afterOrderDelivered($orderInfo);
 
         //自定义事件-订单发货
         event('CustomEventListener', ['admin_order_express', [

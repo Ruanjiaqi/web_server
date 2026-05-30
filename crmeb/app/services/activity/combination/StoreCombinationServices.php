@@ -19,6 +19,7 @@ use app\services\order\StoreOrderServices;
 use app\services\other\QrcodeServices;
 use app\services\product\product\StoreCategoryServices;
 use app\services\product\product\StoreDescriptionServices;
+use app\services\product\product\FmcgProductScopeServices;
 use app\services\product\product\StoreProductRelationServices;
 use app\services\product\product\StoreProductReplyServices;
 use app\services\product\product\StoreProductServices;
@@ -313,10 +314,14 @@ class StoreCombinationServices extends BaseServices
      * @throws \think\db\exception\ModelNotFoundException
      */
 
-    public function getCombinationList()
+    public function getCombinationList(int $distributorId = 0)
     {
+        if ($distributorId <= 0) {
+            return [];
+        }
         [$page, $limit] = $this->getPageValue();
         $list = $this->dao->combinationList(['is_del' => 0, 'is_show' => 1, 'pinkIngTime' => true, 'storeProductId' => true], $page, $limit);
+        $list = app()->make(FmcgProductScopeServices::class)->filterListByDistributorInventoryField($list, $distributorId, 'product_id');
         foreach ($list as &$item) {
             $item['image'] = set_file_url($item['image']);
             $item['price'] = floatval($item['price']);
@@ -398,6 +403,14 @@ class StoreCombinationServices extends BaseServices
         } else {
             $storeInfo = $storeInfo->toArray();
         }
+        $scope = app()->make(FmcgProductScopeServices::class);
+        $distributorId = $scope->boundDistributorId($request);
+        if ($distributorId <= 0) {
+            return ['bind_required' => 1, 'distributor_id' => 0];
+        }
+        if (!$scope->productHasDistributorStock($distributorId, (int)$storeInfo['product_id'])) {
+            throw new ApiException('商品不存在或无库存');
+        }
 
         $siteUrl = sys_config('site_url');
         $storeInfo['image'] = set_file_url($storeInfo['image'], $siteUrl);
@@ -406,7 +419,7 @@ class StoreCombinationServices extends BaseServices
         if ($storeInfo['stock'] > 0) $storeInfo['sale_stock'] = 1;
         /** @var StoreProductRelationServices $storeProductRelationServices */
         $storeProductRelationServices = app()->make(StoreProductRelationServices::class);
-        $storeInfo['userCollect'] = $storeProductRelationServices->isProductRelation(['uid' => $uid, 'product_id' => $id, 'type' => 'collect', 'category' => 'product']);
+        $storeInfo['userCollect'] = $storeProductRelationServices->isProductRelation(['uid' => $uid, 'product_id' => $storeInfo['product_id'], 'type' => 'collect', 'category' => 'product']);
         $storeInfo['userLike'] = false;
         $storeInfo['store_name'] = $storeInfo['title'];
         $storeInfo['product_is_show'] = app()->make(StoreProductServices::class)->value($storeInfo['product_id'], 'is_show');

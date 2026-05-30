@@ -24,6 +24,7 @@ use app\services\order\{StoreCartServices,
     StoreOrderCreateServices,
     StoreOrderEconomizeServices,
     StoreOrderInvoiceServices,
+    FmcgOrderAdapterServices,
     StoreOrderRefundServices,
     StoreOrderServices,
     StoreOrderStatusServices,
@@ -195,10 +196,32 @@ class StoreOrderController
             ['gift_mark', ''],
         ], true);
         $payType = strtolower($payType);
-        $order = CacheService::lock('orderCreate' . $key, function () use ($createServices, $userInfo, $key, $addressId, $payType, $useIntegral, $couponId, $mark, $combinationId, $pinkId, $seckillId, $bargainId, $shipping_type, $real_name, $phone, $storeId, $news, $advanceId, $customForm, $invoice_id, $is_gift, $gift_mark) {
-            return $createServices->createOrder($userInfo['uid'], $key, $userInfo, $addressId, $payType, !!$useIntegral, $couponId, $mark, $combinationId, $pinkId, $seckillId, $bargainId, $shipping_type, $real_name, $phone, $storeId, !!$news, $advanceId, $customForm, $invoice_id, $is_gift, $gift_mark);
+        $fmcgPayload = $request->post();
+        $cartGroup = $this->services->getCacheOrderInfo($userInfo['uid'], $key);
+        if (!$cartGroup) {
+            return app('json')->fail('订单已过期,请刷新当前页面');
+        }
+        app()->make(FmcgOrderAdapterServices::class)->assertBoundDistributorPayload($userInfo['uid'], $fmcgPayload, $cartGroup);
+        $createStoreId = (string)($fmcgPayload['fmcg_delivery_type'] ?? '') === 'pickup' ? -1 : $storeId;
+        $order = CacheService::lock('orderCreate' . $key, function () use ($createServices, $userInfo, $key, $addressId, $payType, $useIntegral, $couponId, $mark, $combinationId, $pinkId, $seckillId, $bargainId, $shipping_type, $real_name, $phone, $createStoreId, $news, $advanceId, $customForm, $invoice_id, $is_gift, $gift_mark) {
+            return $createServices->createOrder($userInfo['uid'], $key, $userInfo, $addressId, $payType, !!$useIntegral, $couponId, $mark, $combinationId, $pinkId, $seckillId, $bargainId, $shipping_type, $real_name, $phone, $createStoreId, !!$news, $advanceId, $customForm, $invoice_id, $is_gift, $gift_mark);
         });
         $orderId = $order['order_id'];
+        try {
+            app()->make(FmcgOrderAdapterServices::class)->afterOrderCreated($userInfo['uid'], $orderId, $fmcgPayload);
+        } catch (\Throwable $e) {
+            $createdOrder = $this->services->getOne(['order_id' => $orderId, 'uid' => $userInfo['uid']]);
+            if ($createdOrder) {
+                app()->make(FmcgOrderAdapterServices::class)->releaseLockedInventory($createdOrder);
+                $this->services->update((int)$createdOrder['id'], [
+                    'is_del' => 1,
+                    'is_cancel' => 1,
+                    'remark' => 'FMCG order rollback: ' . $e->getMessage(),
+                ]);
+            }
+            Log::error('FMCG order create rollback: ' . $e->getMessage());
+            throw $e;
+        }
         return app('json')->status('success', '订单创建成功', compact('orderId', 'key'));
     }
 

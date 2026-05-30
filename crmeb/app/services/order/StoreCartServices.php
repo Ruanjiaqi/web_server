@@ -15,6 +15,7 @@ namespace app\services\order;
 use app\services\activity\advance\StoreAdvanceServices;
 use app\services\BaseServices;
 use app\dao\order\StoreCartDao;
+use app\services\distributor\DistributorServices;
 use app\services\activity\coupon\StoreCouponIssueServices;
 use app\services\product\shipping\ShippingTemplatesServices;
 use app\services\shipping\ShippingTemplatesNoDeliveryServices;
@@ -29,6 +30,7 @@ use app\services\activity\bargain\StoreBargainServices;
 use app\services\activity\combination\StoreCombinationServices;
 use app\services\product\product\StoreProductServices;
 use app\services\product\sku\StoreProductAttrValueServices;
+use think\facade\Db;
 
 /**
  *
@@ -243,6 +245,10 @@ class StoreCartServices extends BaseServices
         }
         //检测库存限量
         [$attrInfo, $product_attr_unique, $bargainPriceMin, $cart_num, $productInfo] = $this->checkProductStock($uid, $cart_num, $product_attr_unique, $type, $product_id, $seckill_id, $bargain_id, $combination_id, $advance_id);
+        if ($type === 0) {
+            $existsNum = $new ? 0 : (int)$this->dao->value(['type' => $type, 'uid' => $uid, 'product_id' => $product_id, 'product_attr_unique' => $product_attr_unique, 'is_del' => 0, 'is_new' => 0, 'is_pay' => 0, 'status' => 1], 'cart_num');
+            $this->assertFmcgCartStock($uid, $product_id, $product_attr_unique, $cart_num + $existsNum);
+        }
         if ($new) {
             /** @var StoreOrderCreateServices $storeOrderCreateService */
             $storeOrderCreateService = app()->make(StoreOrderCreateServices::class);
@@ -356,6 +362,7 @@ class StoreCartServices extends BaseServices
         $stock = $productServices->getProductStock($carInfo->product_id, $carInfo->product_attr_unique);
         if (!$stock) throw new ApiException('暂无库存');
         if ($stock < $number) throw new ApiException('该商品库存不足{:num}', ['num' => $number]);
+        $this->assertFmcgCartStock((int)$uid, (int)$carInfo->product_id, (string)$carInfo->product_attr_unique, (int)$number);
         if ($carInfo->cart_num == $number) return true;
         return $this->dao->changeUserCartNum(['uid' => $uid, 'id' => $id], (int)$number);
     }
@@ -493,11 +500,13 @@ class StoreCartServices extends BaseServices
             if ($cart->cart_num === 0) {
                 return $this->dao->delete($cart->id);
             } else {
+                $this->assertFmcgCartStock((int)$uid, (int)$productId, (string)$unique, (int)$cart->cart_num);
                 $cart->add_time = time();
                 $cart->save();
                 return $cart->id;
             }
         } else {
+            $this->assertFmcgCartStock((int)$uid, (int)$productId, (string)$unique, (int)($num > $min_qty ? $num : $min_qty));
 
             $data = [
                 'uid' => $uid,
@@ -622,6 +631,10 @@ class StoreCartServices extends BaseServices
         $productServices = app()->make(StoreProductServices::class);
         $valid = $invalid = [];
         foreach ($cartList as &$item) {
+            $fmcg = $this->fmcgCartAvailability($uid, (int)$item['product_id'], (string)$item['product_attr_unique']);
+            $item['fmcgAvailable'] = $fmcg['available'];
+            $item['fmcgInvalid'] = $fmcg['invalid'];
+            $item['fmcgDistributorId'] = $fmcg['distributor_id'];
             if ($item['type'] == 0) $item['min_qty'] = $item['productInfo']['min_qty'];
             $item['productInfo']['express_delivery'] = false;
             $item['productInfo']['store_mention'] = false;
@@ -674,6 +687,9 @@ class StoreCartServices extends BaseServices
                 }
             }
             if (isset($item['status']) && $item['status'] == 0) {
+                $item['is_valid'] = 0;
+                $invalid[] = $item;
+            } elseif ($item['type'] == 0 && ($item['fmcgInvalid'] || (int)$item['cart_num'] > (int)$item['fmcgAvailable'])) {
                 $item['is_valid'] = 0;
                 $invalid[] = $item;
             } else {
@@ -747,6 +763,42 @@ class StoreCartServices extends BaseServices
             }
         }
         return true;
+    }
+
+    protected function assertFmcgCartStock(int $uid, int $productId, string $unique, int $num): void
+    {
+        $availability = $this->fmcgCartAvailability($uid, $productId, $unique);
+        if ($availability['distributor_id'] <= 0) {
+            throw new ApiException('请先绑定分销商后再加购');
+        }
+        if ($availability['invalid']) {
+            throw new ApiException('当前绑定分销商未售卖该商品规格');
+        }
+        if ($availability['available'] < $num) {
+            throw new ApiException('分销商库存不足');
+        }
+    }
+
+    protected function fmcgCartAvailability(int $uid, int $productId, string $unique): array
+    {
+        $binding = app()->make(DistributorServices::class)->userBinding($uid);
+        $distributorId = (int)($binding['bind']['distributor_id'] ?? 0);
+        if ($distributorId <= 0) {
+            return ['distributor_id' => 0, 'available' => 0, 'invalid' => 1];
+        }
+        $query = Db::name('distributor_sku_inventory')
+            ->where('distributor_id', $distributorId)
+            ->where('product_id', $productId);
+        if ($unique !== '') {
+            $query->where('unique', $unique);
+        }
+        $row = $query->fieldRaw('SUM(stock - locked_stock) as available_stock')->find();
+        $available = (int)($row['available_stock'] ?? 0);
+        return [
+            'distributor_id' => $distributorId,
+            'available' => max(0, $available),
+            'invalid' => $available <= 0 ? 1 : 0,
+        ];
     }
 
     /**

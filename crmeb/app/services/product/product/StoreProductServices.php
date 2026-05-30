@@ -1640,6 +1640,13 @@ class StoreProductServices extends BaseServices
         } else {
             $data['good_list'] = $this->getProducts(['is_good' => 1, 'is_del' => 0, 'is_show' => 1, 'vip_user' => $vip_user], 12);
         }
+        if ($uid > 0) {
+            $binding = app()->make(\app\services\distributor\DistributorServices::class)->userBinding($uid);
+            $distributorId = (int)($binding['bind']['distributor_id'] ?? 0);
+            if ($distributorId > 0) {
+                $data['good_list'] = app()->make(FmcgProductScopeServices::class)->filterListByDistributorInventory($data['good_list'], $distributorId);
+            }
+        }
         $data['mapKey'] = sys_config('tengxun_map_key');
         $data['store_self_mention'] = (int)sys_config('store_self_mention') ?? 0; //门店自提是否开启
         $data['activity'] = $this->getActivityList($data['storeInfo'], false);
@@ -1957,6 +1964,9 @@ class StoreProductServices extends BaseServices
         $baseList = $firstList = $benefitList = $hotList = $vipList = [];
         $data = [$baseList, $firstList, $benefitList, $hotList, $vipList];
         if ($fields) {
+            /** @var FmcgProductScopeServices $fmcgScope */
+            $fmcgScope = app()->make(FmcgProductScopeServices::class);
+            $distributorId = $fmcgScope->boundDistributorIdByUid($uid);
             /** @var MemberCardServices $memberCardService */
             $memberCardService = app()->make(MemberCardServices::class);
             $vipStatus = $memberCardService->isOpenMemberCard('vip_price');
@@ -2017,6 +2027,7 @@ class StoreProductServices extends BaseServices
                 if ($list) {
                     $list = get_thumb_water($list, $type);
                     $list = $this->getActivityList($list, true, $seckillIdsList, $pinkIdsList, $bargrainIdsList);
+                    $list = $distributorId > 0 ? $fmcgScope->filterListByDistributorInventory($list, $distributorId) : [];
                     foreach ($list as &$item) {
                         if (!($vipStatus && $item['is_vip'])) {
                             $item['vip_price'] = 0;

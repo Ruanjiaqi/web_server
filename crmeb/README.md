@@ -22,6 +22,21 @@ docker run -d --name crmeb \
 - **后台**: http://localhost:8080/admin （账号: admin，密码: crmeb.com）
 - **MySQL**: localhost:3306（账号: root，密码: 123456）
 - **Redis**: localhost:6379
+
+### FMCG 微信支付/分账环境变量
+`docker-compose.yml` 与 `container.config.json` 已预留微信支付和分账变量：`WECHAT_PAY_MCHID`、`WECHAT_PAY_KEY_V3`、`WECHAT_PAY_SERIAL_NO`、`WECHAT_PAY_CERT_PATH`、`WECHAT_PAY_CERT`、`WECHAT_PAY_CERT_CONTENT`、`WECHAT_PAY_PRIVATE_KEY_PATH`、`WECHAT_PAY_PRIVATE_KEY`、`WECHAT_PAY_PRIVATE_KEY_CONTENT`、`WECHAT_PAY_NOTIFY_URL`、`WECHAT_PAY_PROFIT_SHARING_NOTIFY_URL`、`WECHAT_PAY_TRANSFER_NOTIFY_URL`、`SITE_URL`。生产环境请通过容器平台 Secret 或环境变量注入证书/私钥路径或内容，避免提交真实密钥。
+
+回调地址需与微信商户平台配置一致：
+- 普通支付回调：`${SITE_URL}/api/pay/notify/wechat`，V3 直连也可使用 `${SITE_URL}/api/pay/notify/v3wechat`，可用 `WECHAT_PAY_NOTIFY_URL` 覆盖。
+- 微信分账回调：`${SITE_URL}/api/pay/notify/profit_sharing`，可用 `WECHAT_PAY_PROFIT_SHARING_NOTIFY_URL` 覆盖，代码会写入 `profitSharingOrders.notify_url`。
+- 商家转账回调：`${SITE_URL}/api/transfer/notify/wechat`，按实际支付类型替换末尾类型，容器变量 `WECHAT_PAY_TRANSFER_NOTIFY_URL` 用于部署侧留档。
+
+CloudBase Run Secret 注入示例：将 `WECHAT_PAY_CERT_CONTENT`、`WECHAT_PAY_PRIVATE_KEY_CONTENT`、`WECHAT_PAY_KEY_V3` 作为 Secret 环境变量注入，或把证书挂载到 `/run/secrets/wechat_pay_cert.pem`、私钥挂载到 `/run/secrets/wechat_pay_private_key.pem` 并设置 `WECHAT_PAY_CERT_PATH`、`WECHAT_PAY_PRIVATE_KEY_PATH`。启动脚本会写入 `system_config` 与 `system_pem`。
+
+部署后校验：确认后台系统配置中 `site_url`、`fmcg_wechat_pay_notify_url`、`fmcg_wechat_profit_sharing_notify_url` 已写入；微信支付成功后检查普通支付回调；发起一笔待分账订单后检查分账请求体包含 `notify_url`；触发商家转账后检查 `/api/transfer/notify/{type}` 能收到回调。
+
+### FMCG 配送费结算口径
+配送费纳入资金闭环。代销模式订单完成后，消费者支付给总部的订单款和配送费通过同一笔 `wechat_profit_sharing` 分账给分销商；配送费记录同步这笔分账状态。第三方同城/快递生成总部应付结算计划，后台“配送费记录”必须维护接收方、结算批次、状态、付款流水、失败原因、重试次数和对账状态。
 > 详细说明请到 [帮助文档](https://gitee.com/ZhongBangKeJi/CRMEB/blob/master/help/docker/README.md) 查看。
 
 

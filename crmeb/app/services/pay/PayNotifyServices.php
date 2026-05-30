@@ -13,6 +13,7 @@ namespace app\services\pay;
 
 use app\services\order\OtherOrderServices;
 use app\services\order\StoreOrderSuccessServices;
+use app\services\purchase\DistributorPurchaseOrderServices;
 use app\services\user\UserRechargeServices;
 
 /**
@@ -76,6 +77,15 @@ class PayNotifyServices
             if (!$orderInfo) return true;
             if ($orderInfo->paid) return true;
             return $services->paySuccess($orderInfo->toArray(), $payType, ['trade_no' => $trade_no]);
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
+    public function wechatFmcgPurchase(string $order_id = null, string $trade_no = null, string $payType = PayServices::WEIXIN_PAY)
+    {
+        try {
+            return app()->make(DistributorPurchaseOrderServices::class)->markPaidByPayment((string)$order_id, (string)$trade_no, $payType);
         } catch (\Exception $e) {
             return false;
         }

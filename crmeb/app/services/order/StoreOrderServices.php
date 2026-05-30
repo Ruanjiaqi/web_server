@@ -46,6 +46,7 @@ use crmeb\services\printer\Printer;
 use crmeb\services\SystemConfigService;
 use crmeb\utils\Arr;
 use Guzzle\Http\EntityBody;
+use think\facade\Db;
 use think\facade\Log;
 
 /**
@@ -1980,6 +1981,7 @@ HTML;
         $refundServices = app()->make(StoreOrderRefundServices::class);
 
         $this->transaction(function () use ($refundServices, $order) {
+            app()->make(FmcgOrderAdapterServices::class)->releaseLockedInventory($order);
             $res = $refundServices->integralAndCouponBack($order, 'cancel') && $refundServices->regressionStock($order);
             $order->is_cancel = 1;
             if (!($res && $order->save())) {
@@ -2214,6 +2216,7 @@ HTML;
             if (($order['add_time'] + bcmul($secs, '3600', 0)) < time()) {
                 try {
                     $this->transaction(function () use ($order, $refundServices) {
+                        app()->make(FmcgOrderAdapterServices::class)->releaseLockedInventory($order);
                         //回退积分和优惠卷
                         $res = $refundServices->integralAndCouponBack($order, 'cancel');
                         //回退库存和销量
@@ -2532,6 +2535,25 @@ HTML;
             /** @var SystemStoreServices $storeServices */
             $storeServices = app()->make(SystemStoreServices::class);
             $order['system_store'] = $storeServices->getStoreDispose($order['store_id']);
+        }
+        $order['distributor'] = [];
+        $order['fmcg_pickup_point'] = [];
+        if (!empty($order['distributor_id'])) {
+            $distributor = Db::name('distributor')->where('id', (int)$order['distributor_id'])->find();
+            if ($distributor) {
+                $order['distributor'] = $distributor;
+                $order['fmcg_pickup_point'] = [
+                    'id' => 0,
+                    'distributor_id' => (int)$distributor['id'],
+                    'name' => (string)($distributor['store_name'] ?? ''),
+                    'store_name' => (string)($distributor['store_name'] ?? ''),
+                    'phone' => (string)($distributor['phone'] ?? ''),
+                    'address' => (string)($distributor['address'] ?? ''),
+                    'detailed_address' => '',
+                    'latitude' => $distributor['latitude'] ?? 0,
+                    'longitude' => $distributor['longitude'] ?? 0,
+                ];
+            }
         }
         $order['code'] = '';
         if (($order['shipping_type'] === 2 || $order['delivery_uid'] != 0) && $order['verify_code']) {

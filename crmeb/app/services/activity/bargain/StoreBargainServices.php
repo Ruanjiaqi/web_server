@@ -21,6 +21,7 @@ use app\services\other\PosterServices;
 use app\services\other\QrcodeServices;
 use app\services\product\product\StoreCategoryServices;
 use app\services\product\product\StoreDescriptionServices;
+use app\services\product\product\FmcgProductScopeServices;
 use app\services\product\product\StoreProductServices;
 use app\services\product\sku\StoreProductAttrResultServices;
 use app\services\product\sku\StoreProductAttrServices;
@@ -386,13 +387,17 @@ class StoreBargainServices extends BaseServices
      * 砍价列表
      * @return array
      */
-    public function getBargainList()
+    public function getBargainList(int $distributorId = 0)
     {
+        if ($distributorId <= 0) {
+            return [];
+        }
         /** @var StoreBargainUserServices $bargainUserService */
         $bargainUserService = app()->make(StoreBargainUserServices::class);
         [$page, $limit] = $this->getPageValue();
         $field = 'id,product_id,title,min_price,image,price';
         $list = $this->dao->BargainList($page, $limit, $field);
+        $list = app()->make(FmcgProductScopeServices::class)->filterListByDistributorInventoryField($list, $distributorId, 'product_id');
         foreach ($list as &$item) {
             $item['people'] = $bargainUserService->getUserIdList($item['id']);
             $item['price'] = floatval($item['price']);
@@ -476,6 +481,14 @@ class StoreBargainServices extends BaseServices
         $bargain = $this->dao->getOne(['id' => $id], '*', ['description']);
         if (!$bargain) throw new ApiException('砍价商品不存在');
         if ($bargain['stop_time'] < time()) throw new ApiException('砍价已结束');
+        $scope = app()->make(FmcgProductScopeServices::class);
+        $distributorId = $scope->boundDistributorId($request);
+        if ($distributorId <= 0) {
+            return ['bind_required' => 1, 'distributor_id' => 0];
+        }
+        if (!$scope->productHasDistributorStock($distributorId, (int)$bargain['product_id'])) {
+            throw new ApiException('商品不存在或无库存');
+        }
         list($productAttr, $productValue) = $storeProductAttrServices->getProductAttrDetail($id, $request->uid(), 0, 2, $bargain['product_id']);
         foreach ($productValue as $v) {
             $bargain['attr'] = $v;

@@ -17,6 +17,7 @@ use think\Response;
 Route::group(function () {
     Route::any('wechat/serve', 'v1.wechat.WechatController/serve')->option(['real_name' => '公众号服务']);//公众号服务
     Route::any('wechat/miniServe', 'v1.wechat.WechatController/miniServe')->option(['real_name' => '小程序服务']);//公众号服务
+    Route::any('pay/notify/profit_sharing', 'v1.PayController/notify')->append(['type' => 'profit_sharing'])->option(['real_name' => '微信分账回调']);//微信分账回调
     Route::any('pay/notify/:type', 'v1.PayController/notify')->option(['real_name' => '支付回调']);//支付回调
     Route::any('transfer/notify/:type', 'v1.PayController/transferNotify')->option(['real_name' => '商户转账回调']);//商户转账回调
     Route::any('order_call_back', 'v1.order.StoreOrderController/callBack')->option(['real_name' => '商家寄件回调']);//商家寄件回调
@@ -167,6 +168,32 @@ Route::group(function () {
         Route::post('address/edit', 'v1.user.UserAddressController/address_edit')->name('addressEdit')->option(['real_name' => '修改/添加地址']);//修改 添加 地址
         Route::post('address/del', 'v1.user.UserAddressController/address_del')->name('addressDel')->option(['real_name' => '删除地址']);//删除地址
     })->option(['parent' => 'user', 'cate_name' => '用户地址']);
+
+    Route::group(function () {
+        Route::get('distributor/binding', 'v1.distributor.DistributorController/binding')->option(['real_name' => '当前绑定分销商']);
+        Route::post('distributor/bind', 'v1.distributor.DistributorController/bind')->option(['real_name' => '绑定分销商']);
+        Route::get('distributor/products', 'v1.distributor.DistributorController/products')->option(['real_name' => '绑定分销商商品']);
+        Route::get('commission/apply/status', 'v1.distributor.DistributorController/commissionApplyStatus')->option(['real_name' => '佣金分销申请状态']);
+        Route::post('commission/apply', 'v1.distributor.DistributorController/commissionApply')->option(['real_name' => '提交佣金分销申请']);
+        Route::get('mngt/workbench', 'v1.distributor.DistributorController/workbench')->option(['real_name' => '分销商工作台']);
+        Route::get('mngt/profile', 'v1.distributor.DistributorController/profile')->option(['real_name' => '分销商身份']);
+        Route::get('mngt/customers', 'v1.distributor.DistributorController/customers')->option(['real_name' => '分销商客户']);
+        Route::get('mngt/share', 'v1.distributor.DistributorController/share')->option(['real_name' => '分销商分享']);
+        Route::post('mngt/share/record', 'v1.distributor.DistributorController/shareRecord')->option(['real_name' => '分销商分享记录']);
+        Route::post('distributor/share/click', 'v1.distributor.DistributorController/shareClick')->option(['real_name' => '分销商分享点击记录']);
+        Route::get('mngt/inventory', 'v1.distributor.DistributorController/inventory')->option(['real_name' => '分销商库存']);
+        Route::get('mngt/inventory/summary', 'v1.distributor.DistributorController/inventorySummary')->option(['real_name' => '分销商库存汇总']);
+        Route::get('mngt/orders', 'v1.distributor.DistributorController/orders')->option(['real_name' => '分销商订单']);
+        Route::get('mngt/order/:id', 'v1.distributor.DistributorController/orderDetail')->option(['real_name' => '分销商订单详情']);
+        Route::post('mngt/order/:id/delivery', 'v1.distributor.DistributorController/updateDelivery')->option(['real_name' => '分销商更新配送']);
+        Route::get('mngt/purchase/orders', 'v1.distributor.DistributorController/purchaseOrders')->option(['real_name' => '分销商订货单']);
+        Route::post('mngt/purchase/create', 'v1.distributor.DistributorController/purchaseCreate')->option(['real_name' => '创建订货单']);
+        Route::post('mngt/purchase/:id/pay', 'v1.distributor.DistributorController/purchasePay')->option(['real_name' => '分销商订货单支付']);
+        Route::post('mngt/purchase/:id/cancel', 'v1.distributor.DistributorController/purchaseCancel')->option(['real_name' => '取消分销商订货单']);
+        Route::post('mngt/purchase/:id/receive', 'v1.distributor.DistributorController/purchaseReceive')->option(['real_name' => '订货单确认收货']);
+        Route::get('order/fmcg_delivery_options', 'v1.distributor.DistributorController/deliveryOptions')->option(['real_name' => 'FMCG配送方式费用']);
+        Route::get('distributor/delivery/options', 'v1.distributor.DistributorController/deliveryOptions')->option(['real_name' => '分销配送方式费用']);
+    })->option(['parent' => 'distributor', 'cate_name' => '分销业务']);
 
     Route::group(function () { //用户类 收藏
         Route::get('collect/user', 'v1.user.UserCollectController/collect_user')->name('collectUser')->option(['real_name' => '收藏商品列表']);//收藏商品列表
@@ -466,6 +493,7 @@ Route::group(function () {
     Route::group(function () {
         //小程序登陆
         Route::post('wechat/mp_auth', 'v1.wechat.AuthController/mp_auth')->name('mpAuth')->option(['real_name' => '小程序登陆']);//小程序登陆
+        Route::post('mngt/login', 'v1.wechat.AuthController/mp_auth')->option(['real_name' => '分销商小程序登陆']);
         Route::get('wechat/get_logo', 'v1.wechat.AuthController/get_logo')->name('getLogo')->option(['real_name' => '小程序登陆授权展示logo']);//小程序登陆授权展示logo
         Route::get('wechat/temp_ids', 'v1.wechat.AuthController/temp_ids')->name('wechatTempIds')->option(['real_name' => '小程序订阅消息']);//小程序订阅消息
         Route::get('wechat/live', 'v1.wechat.AuthController/live')->name('wechatLive')->option(['real_name' => '小程序直播列表']);//小程序直播列表

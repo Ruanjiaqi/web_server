@@ -34,6 +34,12 @@ return [
             'file' => 'v6.0.0.php',
             'description' => '性能优化版本'
         ],
+        [
+            'version' => 'CRMEB-BZ v6.0.1-FMCG',
+            'code' => 601,
+            'file' => 'v6.0.1-fmcg.php',
+            'description' => 'FMCG分销、二级库存、订货、佣金和分账基础表升级'
+        ],
     ],
 
     // 升级脚本目录

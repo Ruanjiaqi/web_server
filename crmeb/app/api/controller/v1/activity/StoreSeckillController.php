@@ -13,6 +13,7 @@ namespace app\api\controller\v1\activity;
 use app\Request;
 use app\services\activity\seckill\StoreSeckillServices;
 use app\services\other\QrcodeServices;
+use app\services\product\product\FmcgProductScopeServices;
 use crmeb\services\GroupDataService;
 
 /**
@@ -104,10 +105,11 @@ class StoreSeckillController
      * @throws \think\db\exception\DbException
      * @throws \think\db\exception\ModelNotFoundException
      */
-    public function lst($time)
+    public function lst(Request $request, $time)
     {
         if (!$time) return app('json')->fail('参数错误');
-        $seckillInfo = $this->services->getListByTime($time);
+        $distributorId = app()->make(FmcgProductScopeServices::class)->boundDistributorId($request);
+        $seckillInfo = $this->services->getListByTime($time, $distributorId);
         return app('json')->success(get_thumb_water($seckillInfo));
     }
 

@@ -1,0 +1,49 @@
+services:
+  crmeb:
+    build: .
+    ports:
+      - "8080:80"
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: crmeb
+      DB_USERNAME: crmeb
+      DB_PASSWORD: crmeb
+      REDIS_HOST: redis
+      SITE_URL: ${SITE_URL:-http://localhost:8080}
+      WECHAT_PAY_MCHID: ${WECHAT_PAY_MCHID:-}
+      WECHAT_PAY_KEY_V3: ${WECHAT_PAY_KEY_V3:-}
+      WECHAT_PAY_SERIAL_NO: ${WECHAT_PAY_SERIAL_NO:-}
+      WECHAT_PAY_CERT_PATH: ${WECHAT_PAY_CERT_PATH:-/run/secrets/wechat_pay_cert.pem}
+      WECHAT_PAY_CERT: ${WECHAT_PAY_CERT:-}
+      WECHAT_PAY_CERT_CONTENT: ${WECHAT_PAY_CERT_CONTENT:-}
+      WECHAT_PAY_PRIVATE_KEY_PATH: ${WECHAT_PAY_PRIVATE_KEY_PATH:-/run/secrets/wechat_pay_private_key.pem}
+      WECHAT_PAY_PRIVATE_KEY: ${WECHAT_PAY_PRIVATE_KEY:-}
+      WECHAT_PAY_PRIVATE_KEY_CONTENT: ${WECHAT_PAY_PRIVATE_KEY_CONTENT:-}
+      WECHAT_PAY_PROFIT_SHARING_NOTIFY_URL: ${WECHAT_PAY_PROFIT_SHARING_NOTIFY_URL:-http://localhost:8080/api/pay/notify/profit_sharing}
+      WECHAT_PAY_NOTIFY_URL: ${WECHAT_PAY_NOTIFY_URL:-http://localhost:8080/api/pay/notify/wechat}
+      WECHAT_PAY_TRANSFER_NOTIFY_URL: ${WECHAT_PAY_TRANSFER_NOTIFY_URL:-http://localhost:8080/api/transfer/notify/wechat}
+    depends_on:
+      - mysql
+      - redis
+    volumes:
+      - .:/var/www/html
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: crmeb
+      MYSQL_USER: crmeb
+      MYSQL_PASSWORD: crmeb
+      MYSQL_ROOT_PASSWORD: crmeb_root
+    ports:
+      - "33060:3306"
+    volumes:
+      - crmeb-mysql:/var/lib/mysql
+      - ./public/install/crmeb.sql:/docker-entrypoint-initdb.d/crmeb.sql:ro
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "63790:6379"
+
+volumes:
+  crmeb-mysql:
